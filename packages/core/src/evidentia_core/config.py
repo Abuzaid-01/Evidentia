@@ -153,8 +153,14 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _safety(self) -> Settings:
-        if self.environment in {"staging", "production"} and self.auth_mode == "dev":
-            raise ValueError("AUTH_MODE=dev is only allowed in local/test environments")
+        if (
+            self.environment in {"staging", "production"}
+            and self.auth_mode == "dev"
+            and not self.demo_mode_enabled
+        ):
+            raise ValueError(
+                "AUTH_MODE=dev is only allowed in local/test environments or when DEMO_MODE_ENABLED=true"
+            )
         if self.auth_mode == "clerk" and not self.clerk_issuer:
             raise ValueError("AUTH_MODE=clerk requires CLERK_ISSUER")
         return self
