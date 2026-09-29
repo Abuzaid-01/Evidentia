@@ -12,6 +12,17 @@ from evidentia_api.deps import SettingsDep
 router = APIRouter(tags=["health"])
 
 
+@router.get("/")
+async def root() -> dict[str, str]:
+    return {
+        "app": "Evidentia API",
+        "status": "ok",
+        "docs": "/docs",
+        "health": "/healthz",
+        "readiness": "/readyz",
+    }
+
+
 @router.get("/healthz")
 async def liveness() -> dict[str, str]:
     return {"status": "ok"}
