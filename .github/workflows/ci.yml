@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-24.04
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://evidentia:evidentia@localhost:5432/evidentia_test
+      TEST_REDIS_URL: redis://localhost:6379/15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+
+      # Native services (no containers): the runner's Postgres 16 + pgvector/PostGIS from PGDG, and Redis.
+      - name: Start Postgres with pgvector + PostGIS
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-16-pgvector postgresql-16-postgis-3 redis-server
+          sudo systemctl start postgresql redis-server
+          sudo -u postgres psql -c "CREATE ROLE evidentia LOGIN PASSWORD 'evidentia' NOSUPERUSER NOBYPASSRLS"
+          sudo -u postgres psql -c "CREATE DATABASE evidentia_test OWNER evidentia"
+          sudo -u postgres psql -d evidentia_test -c "CREATE EXTENSION vector; CREATE EXTENSION postgis; CREATE EXTENSION pgcrypto;"
+
+      - run: uv sync --all-packages
+      - run: uv run playwright install --with-deps chromium  # report PDF test
+      - run: uv run ruff check packages services migrations infra
+      - run: uv run ruff format --check packages services migrations infra
+      - run: uv run pytest
+
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web lint
+      - run: pnpm --filter web typecheck
+      - run: pnpm --filter web build

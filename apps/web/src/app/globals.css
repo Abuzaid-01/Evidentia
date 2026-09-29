@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+/*
+ * Evidentia design tokens. Neutral "evidence room" surfaces with an emerald accent.
+ * Light and dark themes share the same token names.
+ */
+:root {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --surface-muted: #f1f3f0;
+  --border: #e3e6e1;
+  --text: #16201b;
+  --text-muted: #5d6b63;
+  --text-subtle: #8a978f;
+  --accent: #0f7a55;
+  --accent-hover: #0b6546;
+  --accent-soft: #e3f3ec;
+  --accent-contrast: #ffffff;
+  --warning: #a15c07;
+  --warning-soft: #fdf1dc;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --info: #1e5aa8;
+  --info-soft: #e6effa;
+  --ring: #0f7a5566;
+  --shadow: 0 1px 2px rgb(16 24 20 / 0.06), 0 1px 3px rgb(16 24 20 / 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1210;
+    --surface: #141b18;
+    --surface-muted: #1a2320;
+    --border: #26312c;
+    --text: #e7ede9;
+    --text-muted: #9fb0a6;
+    --text-subtle: #6f8077;
+    --accent: #34c28c;
+    --accent-hover: #4fd29f;
+    --accent-soft: #15372a;
+    --accent-contrast: #06140e;
+    --warning: #f2b45a;
+    --warning-soft: #3a2a12;
+    --danger: #f1857b;
+    --danger-soft: #3d1a17;
+    --info: #7fb0f0;
+    --info-soft: #172a42;
+    --ring: #34c28c66;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-ring: var(--ring);
+  --shadow-card: var(--shadow);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--accent-soft);
+}

@@ -1,0 +1,21 @@
+[project]
+name = "evidentia-ml"
+version = "0.1.0"
+description = "Self-hosted ML for Evidentia: SigLIP embeddings, before/after alignment and change detection"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "pillow>=11.0",
+    "torch>=2.6",
+    "transformers>=4.49",
+    "sentencepiece>=0.2",
+    "protobuf>=5.0",
+    "opencv-python-headless>=4.10",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/evidentia_ml"]

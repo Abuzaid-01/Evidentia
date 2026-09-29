@@ -1,0 +1,17 @@
+[project]
+name = "evidentia-reporting"
+version = "0.1.0"
+description = "Report rendering: manifest -> HTML (Jinja2) -> PDF (Playwright)"
+requires-python = ">=3.12"
+dependencies = [
+    "evidentia-core",
+    "jinja2>=3.1",
+    "playwright>=1.48",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/evidentia_reporting"]

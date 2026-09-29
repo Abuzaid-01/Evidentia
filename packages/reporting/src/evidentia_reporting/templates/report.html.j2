@@ -1,0 +1,217 @@
+{% macro cites(refs) %}{% for r in refs %}<a class="cite" href="#{{ r }}">{{ r }}</a>{% endfor %}{% endmacro %}
+{% macro sentences(items) %}
+{% if items %}
+<p>{% for s in items %}{{ s.text }} {{ cites(s.cites) }} {% endfor %}</p>
+{% else %}
+<p class="muted">Nothing to report in this section.</p>
+{% endif %}
+{% endmacro %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ m.report.title }}</title>
+<style>
+  body { font: 11pt/1.5 Georgia, "Times New Roman", serif; color: #1c1c1c; margin: 0 auto; max-width: 820px; padding: 24px; }
+  h1 { font-size: 22pt; margin: 0 0 4px; } h2 { font-size: 14pt; border-bottom: 1px solid #ccc; padding-bottom: 2px; margin-top: 28px; }
+  h3 { font-size: 11pt; margin: 16px 0 4px; }
+  .meta, .muted, figcaption, .small { font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; color: #555; }
+  .notice { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; background: #f4f4f0; border-left: 3px solid #888; padding: 8px 10px; margin: 14px 0; }
+  .draft { color: #a33; font-weight: bold; }
+  a.cite { font-family: Helvetica, Arial, sans-serif; font-size: 7.5pt; vertical-align: super; color: #245; text-decoration: none; margin-left: 1px; }
+  a.cite::before { content: "["; } a.cite::after { content: "]"; }
+  table { width: 100%; border-collapse: collapse; font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; }
+  th, td { text-align: left; vertical-align: top; border-bottom: 1px solid #e3e3e3; padding: 4px 6px 4px 0; }
+  .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  figure { margin: 0; break-inside: avoid; } figure img { width: 100%; height: 150px; object-fit: cover; background: #eee; display: block; }
+  .noimg { height: 150px; background: #eee; display: flex; align-items: center; justify-content: center; font: 8pt Helvetica, Arial, sans-serif; color: #777; text-align: center; padding: 6px; }
+  .mono { font-family: Menlo, Consolas, monospace; font-size: 7.5pt; word-break: break-all; }
+  .item { break-inside: avoid; margin-bottom: 10px; }
+  footer { margin-top: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>{{ m.report.title }}</h1>
+  <div class="meta">
+    {{ m.report.project.name }}{% if m.report.site %} · {{ m.report.site.name }}{% endif %}
+    · Reporting period: {{ period(m.report.period_start, m.report.period_end) }}
+    · {{ m.report.audience | capitalize }} report
+    {% if m.published %}
+    · Version {{ m.published.version }}, published {{ m.published.published_at | date }} by {{ m.published.published_by.name }}
+    {% else %}
+    · <span class="draft">DRAFT PREVIEW, not published</span>
+    {% endif %}
+  </div>
+  <div class="notice">
+    Every sentence in this report cites an approved claim (C) or a sourced metric (M). Claims were
+    approved by a reviewer other than their author and rest on human-verified evidence; numbers come
+    only from metrics with a declared source and method. Each figure names its original Cloudinary
+    asset and the exact transformation used to render it.
+    {% if m.report.audience == "external" %}Faces are pixelated in every figure; precise locations are withheld.{% endif %}
+  </div>
+</header>
+
+<h2>1. {{ sections.summary }}</h2>
+{{ sentences(m.narrative.summary) }}
+
+<h2>2. {{ sections.overview }}</h2>
+{{ sentences(m.narrative.overview) }}
+
+<h2>3. {{ sections.timeline }}</h2>
+{% if m.timeline %}
+<table>
+  <tr><th>When</th><th>What</th><th>Where</th><th>Source</th></tr>
+  {% for t in m.timeline %}
+  <tr>
+    <td>{{ period(t.starts_on, t.ends_on) }}</td>
+    <td>{{ t.title }}</td>
+    <td>{{ t.site or "—" }}</td>
+    <td>{% if t.ref %}{{ cites([t.ref]) }}{% else %}activity event ({{ t.evidence_count }} media){% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="muted">No dated activities or claims in this period.</p>
+{% endif %}
+
+<h2>4. {{ sections.gallery }}</h2>
+{% if figures %}
+<div class="gallery">
+  {% for f in figures %}
+  <figure id="fig-{{ f.asset.ref }}">
+    {% if f.asset.figure and f.asset.figure.url %}
+    <img src="{{ f.asset.figure.url }}" alt="{{ f.asset.caption or f.asset.original_filename or f.asset.ref }}">
+    {% else %}
+    <div class="noimg">{{ f.asset.resource_type | capitalize }} evidence {{ f.asset.ref }}<br>not rendered in this report</div>
+    {% endif %}
+    <figcaption>
+      <b>{{ f.asset.ref }}</b> · {{ f.asset.caption or f.asset.original_filename or "untitled" }}<br>
+      Captured {{ f.asset.capture_time | date }} ({{ f.asset.capture_time_source | label }}){% if f.asset.site %} · {{ f.asset.site }}{% endif %}{% if f.evidence.span %} · {{ f.evidence.span | span_label }}{% endif %}<br>
+      {% if f.evidence.observation %}{{ f.evidence.observation.subject | label }} ({{ f.evidence.observation.status }}) · {% endif %}supports {{ cites([f.evidence.claim_ref]) }}
+    </figcaption>
+  </figure>
+  {% endfor %}
+</div>
+{% if hidden_figures %}<p class="small">{{ hidden_figures }} more supporting media items are listed in the appendix.</p>{% endif %}
+{% elif not comparisons %}
+<p class="muted">No supporting media.</p>
+{% endif %}
+{% if comparisons %}
+<style>
+  figure.pair { margin: 14px 0 18px; } figure.pair img { width: 100%; height: auto; background: #eee; display: block; }
+  figure.pair .noimg { height: 120px; } figure.pair ul { margin: 4px 0 0; padding-left: 16px; }
+</style>
+<h3>Before and after</h3>
+<p class="small">Pairs of photos of the same place on two dates, matched and aligned by feature geometry and confirmed by a reviewer. They show visible change only; each lists its own limitations.</p>
+{% for b in comparisons %}
+<figure class="pair" id="{{ b.ref }}">
+  {% if b.figure and b.figure.url %}
+  <img src="{{ b.figure.url }}" alt="Before and after comparison {{ b.ref }}">
+  {% else %}
+  <div class="noimg">Comparison {{ b.ref }} not rendered in this report</div>
+  {% endif %}
+  <figcaption>
+    <b>{{ b.ref }}</b> · before <a href="#{{ b.before_asset_ref }}">{{ b.before_asset_ref }}</a> captured {{ assets[b.before_asset_ref].capture_time | date }} · after <a href="#{{ b.after_asset_ref }}">{{ b.after_asset_ref }}</a> captured {{ assets[b.after_asset_ref].capture_time | date }}{% if assets[b.after_asset_ref].site %} · {{ assets[b.after_asset_ref].site }}{% endif %}<br>
+    {{ b.change.summary }} Alignment: {{ b.alignment.grade }}. Confirmed by {{ b.confirmed_by.name }}{% if b.decision_note %} (“{{ b.decision_note }}”){% endif %} · supports {{ cites(b.claim_refs) }}
+    <ul>{% for l in b.limitations %}<li>{{ l }}</li>{% endfor %}</ul>
+  </figcaption>
+</figure>
+{% endfor %}
+{% endif %}
+
+<h2>5. {{ sections.metrics }}</h2>
+{% if m.metrics %}
+<table>
+  <tr><th>Ref</th><th>Metric</th><th>Value</th><th>Period</th><th>Method</th><th>Source</th></tr>
+  {% for x in m.metrics %}
+  <tr id="{{ x.ref }}">
+    <td><b>{{ x.ref }}</b></td><td>{{ x.name }}{% if x.site %} ({{ x.site }}){% endif %}</td>
+    <td>{{ x.value }} {{ x.unit or "" }}</td><td>{{ period(x.period_start, x.period_end) }}</td>
+    <td>{{ x.method }}</td><td>{{ x.source_type | label }}: {{ x.source_reference }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="muted">No metrics are cited in this report.</p>
+{% endif %}
+
+<h2>6. {{ sections.limitations }}</h2>
+{% if m.limitations %}
+<ul>{% for s in m.limitations %}<li>{{ s.text }} {{ cites(s.cites) }}</li>{% endfor %}</ul>
+{% else %}
+<p class="muted">No specific limitations were derived from the evidence.</p>
+{% endif %}
+
+<h2>7. {{ sections.appendix }}</h2>
+<h3>A. Claims</h3>
+{% for c in m.claims %}
+<div class="item" id="{{ c.ref }}">
+  <b>{{ c.ref }}</b> · {{ c.statement }}
+  <div class="small">
+    {{ c.claim_type | capitalize }} claim{% if c.site %} · {{ c.site }}{% endif %} · period {{ period(c.period_start, c.period_end) }}
+    · author {{ c.author.name }} · approved by {{ c.approved_by.name }} on {{ c.approved_at | date }}{% if c.decision_note %} (“{{ c.decision_note }}”){% endif %}<br>
+    Validation: {% if c.validation %}{{ c.validation.verdict | label }}{% if c.validation.model %} by {{ c.validation.provider }}/{{ c.validation.model }} ({{ c.validation.version }}){% endif %}{% else %}not run{% endif %}
+    · evidence {% for r in c.evidence_refs %}<a class="cite" href="#{{ r }}">{{ r }}</a>{% else %}none{% endfor %}
+    · metrics {% for r in c.metric_refs %}<a class="cite" href="#{{ r }}">{{ r }}</a>{% else %}none{% endfor %}
+    {% if c.app_url %}· <a href="{{ c.app_url }}">open in Evidentia</a>{% endif %}
+  </div>
+</div>
+{% endfor %}
+
+<h3>B. Evidence links</h3>
+<table>
+  <tr><th>Ref</th><th>Claim</th><th>Relation</th><th>Media</th><th>Observation and who produced it</th></tr>
+  {% for e in m.evidence %}
+  <tr id="{{ e.ref }}">
+    <td><b>{{ e.ref }}</b></td><td>{{ cites([e.claim_ref]) }}</td><td>{{ e.relation }}</td>
+    <td><a href="#{{ e.asset_ref }}">{{ e.asset_ref }}</a></td>
+    <td>
+      {% if e.observation %}
+      {{ e.observation.ontology_type }} “{{ e.observation.subject | label }}” {{ e.observation.predicate }},
+      {{ e.observation.status }}{% if e.observation.confidence is not none %}, confidence {{ "%.2f" | format(e.observation.confidence) }}{% endif %};
+      {% if e.observation.run %}{{ e.observation.source_kind }}: {{ e.observation.run.provider }}/{{ e.observation.run.model }}{% if e.observation.run.prompt_version %}, prompt {{ e.observation.run.prompt_version }}{% endif %}{% if e.observation.run.taxonomy_version %}, taxonomy v{{ e.observation.run.taxonomy_version }}{% endif %}{% else %}{{ e.observation.source_kind }}{% if e.observation.source_provider %} ({{ e.observation.source_provider }}){% endif %}{% endif %}
+      {% elif e.pair_ref is defined and e.pair_ref %}before/after comparison <a href="#{{ e.pair_ref }}">{{ e.pair_ref }}</a> (confirmed by a reviewer){% else %}whole media item (reviewed){% endif %}
+      {% if e.note %}<br><i>{{ e.note }}</i>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h3>C. Media provenance</h3>
+<table>
+  <tr><th>Ref</th><th>File</th><th>Captured</th><th>Cloudinary asset and rendition</th></tr>
+  {% for a in m.assets %}
+  <tr id="{{ a.ref }}">
+    <td><b>{{ a.ref }}</b></td>
+    <td>{{ a.original_filename or "—" }}<br><span class="small">{{ a.resource_type }}/{{ a.format or "?" }}{% if a.app_url %} · <a href="{{ a.app_url }}">open</a>{% endif %}</span></td>
+    <td>{{ a.capture_time | date }}<br><span class="small">time: {{ a.capture_time_source | label }} · location: {{ a.location_source | label }}</span></td>
+    <td class="mono">{{ a.public_id }}{% if a.cloudinary_version %} v{{ a.cloudinary_version }}{% endif %}{% if a.figure %}<br>{% if a.figure.named_transformation %}t_{{ a.figure.named_transformation }} = {% endif %}{{ a.figure.transformation }}{% endif %}{% if a.sha256 %}<br>sha256 {{ a.sha256 }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% if comparisons %}
+<h3>D. Before/after comparisons</h3>
+<p class="small">Visual measurements of the aligned photos. They describe pixels, not outcomes, and are not metrics.</p>
+<table>
+  <tr><th>Ref</th><th>Photos</th><th>Geometry</th><th>Visual measures</th><th>Composite (Cloudinary transformation)</th></tr>
+  {% for b in comparisons %}
+  <tr>
+    <td><b>{{ b.ref }}</b></td>
+    <td><a href="#{{ b.before_asset_ref }}">{{ b.before_asset_ref }}</a> → <a href="#{{ b.after_asset_ref }}">{{ b.after_asset_ref }}</a>{% if b.days_apart is not none %}<br><span class="small">{{ b.days_apart }} days apart</span>{% endif %}</td>
+    <td>{{ b.alignment.grade }}{% if b.alignment.inliers is not none %}<br><span class="small">{{ b.alignment.inliers }} inlier matches ({{ b.alignment.inlier_ratio | pct }}), overlap {{ b.alignment.overlap | pct }} · {{ b.alignment.method }}</span>{% endif %}</td>
+    <td>{% if b.change.changed_share is not none %}changed {{ b.change.changed_share | pct }} of the shared view<br>green cover {{ b.change.green_cover_before | pct }} → {{ b.change.green_cover_after | pct }}<br><span class="small">{{ b.change.method }} · {{ b.analysis_version }}</span>{% else %}not measured{% endif %}</td>
+    <td class="mono">{% if b.figure %}{{ b.figure.transformation }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+<footer class="small">
+  <h3>{% if comparisons %}E{% else %}D{% endif %}. How this report was produced</h3>
+  Narrative: {{ m.narrative.generator.mode | default("manual") }}{% if m.narrative.generator.model %} ({{ m.narrative.generator.provider }}/{{ m.narrative.generator.model }}, {{ m.narrative.generator.version }}){% endif %}{% if m.narrative.generator.edited_by %}, edited by {{ m.narrative.generator.edited_by }}{% endif %}.
+  Every sentence passed the citation and number checks before publishing. Limitations are derived by rules, not written by a model.<br>
+  Renderer {{ renderer_version }} · manifest {{ m.manifest_version }} · manifest sha256 <span class="mono">{{ manifest_sha256 }}</span>
+</footer>
+</body>
+</html>

@@ -1,0 +1,68 @@
+[project]
+name = "evidentia-workspace"
+version = "0.1.0"
+description = "Evidentia: AI-powered impact & sustainability evidence platform built on Cloudinary"
+requires-python = ">=3.12"
+dependencies = [
+    "evidentia-core",
+    "evidentia-cloudinary",
+    "evidentia-ai",
+    "evidentia-ml",
+    "evidentia-reporting",
+    "evidentia-api",
+    "evidentia-worker",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*", "services/*"]
+
+[tool.uv.sources]
+evidentia-core = { workspace = true }
+evidentia-cloudinary = { workspace = true }
+evidentia-ai = { workspace = true }
+evidentia-ml = { workspace = true }
+evidentia-reporting = { workspace = true }
+evidentia-api = { workspace = true }
+evidentia-worker = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "respx>=0.21",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "honcho>=2.0",
+    "types-redis>=4.6",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC", "S", "RUF"]
+# E501: the formatter owns line length (long strings are allowed)
+# UP046/UP047: keep Generic/TypeVar style (clearer with Pydantic generics)
+ignore = ["S101", "S311", "RUF012", "B008", "E501", "UP046", "UP047"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S105", "S106"]
+"migrations/**" = ["E501"]
+"**/evidentia_cloudinary/exif.py" = ["RUF001"]
+
+[tool.pytest.ini_options]
+testpaths = ["packages", "services"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = ["integration: needs a running Postgres + Redis (skipped when unavailable)"]
+addopts = "-q --import-mode=importlib"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
