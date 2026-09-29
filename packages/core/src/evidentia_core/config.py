@@ -140,6 +140,16 @@ class Settings(BaseSettings):
     near_duplicate_max_distance: int = Field(default=8, ge=0, le=64)
     site_default_radius_m: int = 1000
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, value: object) -> object:
+        if isinstance(value, str):
+            if value.startswith("postgres://"):
+                return value.replace("postgres://", "postgresql+psycopg://", 1)
+            if value.startswith("postgresql://") and not value.startswith("postgresql+"):
+                return value.replace("postgresql://", "postgresql+psycopg://", 1)
+        return value
+
     @field_validator(
         "api_cors_origins",
         "clerk_authorized_parties",
