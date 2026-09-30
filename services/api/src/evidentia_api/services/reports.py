@@ -1163,6 +1163,60 @@ def _enqueue_pdf(snapshot_id: uuid.UUID) -> None:
         log.warning("report_pdf_enqueue_failed", snapshot_id=str(snapshot_id), error=str(exc))
 
 
+async def public_report_view(
+    db: AsyncSession, snapshot: ReportSnapshot, settings: Settings, *, cloudinary_ready: bool
+) -> dict[str, Any]:
+    """What a public share link shows: never the internal record itself.
+
+    An externally published snapshot is served exactly as published (verifiable, with its PDF). An
+    internal one is turned into a privacy-redacted copy first: every image becomes Cloudinary's
+    face-pixelated rendition (videos are left out), and links into the app are removed.
+    """
+    manifest = snapshot.manifest
+    official = manifest["report"]["audience"] == ReportAudience.EXTERNAL.value
+    public = manifest
+    if not official:
+        public = jsonable(manifest)  # deep copy
+        public["report"]["audience"] = ReportAudience.EXTERNAL.value
+        for claim in public.get("claims") or []:
+            claim["app_url"] = None
+        asset_ids = [uuid.UUID(a["id"]) for a in public.get("assets") or []]
+        rows = {
+            a.id: a for a in (await db.scalars(select(Asset).where(Asset.id.in_(asset_ids)))).all()
+        }
+        for entry in public.get("assets") or []:
+            row = rows.get(uuid.UUID(entry["id"]))
+            entry["app_url"] = None
+            entry["figure"] = (
+                _figure(row, ReportAudience.EXTERNAL, settings, cloudinary_ready=cloudinary_ready)
+                if row
+                else None
+            )
+        for comparison in public.get("comparisons") or []:
+            pair = await db.get(BeforeAfterPair, uuid.UUID(comparison["id"]))
+            before = await db.get(Asset, pair.before_asset_id) if pair else None
+            comparison["figure"] = (
+                _composite_figure(
+                    pair, before, ReportAudience.EXTERNAL, cloudinary_ready=cloudinary_ready
+                )
+                if pair and before
+                else None
+            )
+    pdf_url = None
+    if official and snapshot.pdf_status == PdfStatus.READY and snapshot.pdf_public_id:
+        pdf_url = raw_download_url(snapshot.pdf_public_id, ttl_seconds=600).url
+    return {
+        "title": manifest["report"]["title"],
+        "version": snapshot.version,
+        "published_at": snapshot.published_at.isoformat(),
+        "html": render_html(public),
+        "redacted_copy": not official,
+        "fingerprint": manifest_hash(public),
+        "published_fingerprint": snapshot.manifest_sha256,
+        "pdf_url": pdf_url,
+    }
+
+
 def verify_snapshot(snapshot: ReportSnapshot) -> SnapshotVerification:
     recomputed_manifest = manifest_hash(snapshot.manifest)
     recomputed_html = sha256_hex(render_html(snapshot.manifest))

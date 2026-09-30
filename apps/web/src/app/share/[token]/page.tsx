@@ -3,14 +3,17 @@
 import {
   AlertCircle,
   Calendar,
+  Download,
   GitFork,
   MapPin,
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useSharedContent } from "@/lib/api/hooks";
 import { formatDate } from "@/lib/utils";
@@ -19,12 +22,6 @@ type RenditionEntry = {
   url: string;
   width?: number;
   height?: number;
-};
-
-type ClaimEntry = {
-  id?: string;
-  statement: string;
-  status?: string;
 };
 
 type SharedEvidenceData = {
@@ -46,11 +43,60 @@ type SharedReportData = {
   title: string;
   published_at: string;
   version: number;
-  manifest?: {
-    report?: { summary?: string };
-    claims?: ClaimEntry[];
-  };
+  html: string;
+  redacted_copy: boolean;
+  fingerprint: string;
+  published_fingerprint: string;
+  pdf_url: string | null;
 };
+
+function SharedReport({ report }: { report: SharedReportData }) {
+  const frame = useRef<HTMLIFrameElement>(null);
+  const [height, setHeight] = useState(1200);
+
+  function downloadPdf() {
+    if (report.pdf_url) {
+      window.open(report.pdf_url, "_blank", "noopener");
+      return;
+    }
+    // No stored public PDF (internal reports are redacted on the fly): print the redacted report
+    frame.current?.contentWindow?.focus();
+    frame.current?.contentWindow?.print();
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+        <div className="text-xs text-text-muted">
+          <p className="font-medium text-text">
+            {report.title} · version {report.version} · published {formatDate(report.published_at)}
+          </p>
+          <p className="mt-0.5">
+            {report.redacted_copy
+              ? "Public version: faces are pixelated by Cloudinary and internal links removed. The organisation's published original is frozen and verifiable."
+              : "Shown exactly as published: frozen and verifiable."}{" "}
+            Fingerprint <span className="font-mono">{report.published_fingerprint.slice(0, 16)}…</span>
+          </p>
+        </div>
+        <Button onClick={downloadPdf}>
+          <Download /> Download PDF
+        </Button>
+      </div>
+      <iframe
+        ref={frame}
+        title={report.title}
+        srcDoc={report.html}
+        sandbox="allow-same-origin allow-popups allow-modals"
+        onLoad={() => {
+          const body = frame.current?.contentDocument?.body;
+          if (body) setHeight(body.scrollHeight + 32);
+        }}
+        style={{ height }}
+        className="w-full rounded-xl border border-border bg-white"
+      />
+    </div>
+  );
+}
 
 export default function PublicSharePage() {
   const { token } = useParams<{ token: string }>();
@@ -272,46 +318,8 @@ export default function PublicSharePage() {
           </div>
         )}
 
-        {/* Report View */}
-        {target_type === "report" && (
-          <Card className="p-6 border-border bg-surface space-y-6">
-            <div className="border-b border-border pb-4">
-              <h2 className="text-xl font-bold text-text">{reportData.title}</h2>
-              <p className="text-xs text-text-muted mt-1">
-                Published {formatDate(reportData.published_at)} · Version {reportData.version}
-              </p>
-            </div>
-
-            {reportData.manifest && (
-              <div className="space-y-4 text-xs">
-                <div>
-                  <h3 className="font-semibold uppercase tracking-wider text-text-subtle mb-2">
-                    Executive Summary
-                  </h3>
-                  <p className="text-text leading-relaxed">
-                    {reportData.manifest.report?.summary ?? "Report summary and verified impact findings."}
-                  </p>
-                </div>
-
-                {reportData.manifest.claims && reportData.manifest.claims.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold uppercase tracking-wider text-text-subtle mb-2">
-                      Verified Claims ({reportData.manifest.claims.length})
-                    </h3>
-                    <div className="space-y-2">
-                      {reportData.manifest.claims.map((c, i) => (
-                        <div key={i} className="rounded-lg border border-border bg-surface-muted/30 p-3">
-                          <p className="font-medium text-text">{c.statement}</p>
-                          <span className="text-[10px] text-accent uppercase block mt-1">Status: Approved</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
-        )}
+        {/* Report View: the real report (privacy-redacted), plus PDF download */}
+        {target_type === "report" && <SharedReport report={reportData} />}
       </main>
 
       {/* Footer */}

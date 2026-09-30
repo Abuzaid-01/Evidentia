@@ -587,14 +587,12 @@ async def resolve_shared_content(
         if snapshot is None:
             raise NotFound("Shared report snapshot not found")
 
-        # The manifest is guaranteed to use external/redacted figures
-        data = {
-            "title": snapshot.manifest.get("report", {}).get("title", link.title),
-            "version": snapshot.version,
-            "manifest": snapshot.manifest,
-            "pdf_url": None,  # PDF link requires signed expiring access
-            "published_at": snapshot.published_at.isoformat(),
-        }
+        # Never the internal record: a privacy-redacted public view of the published report
+        from evidentia_api.services.reports import public_report_view
+
+        data = await public_report_view(
+            db, snapshot, settings, cloudinary_ready=settings.cloudinary_configured
+        )
 
     elif link.target_type == "evidence":
         asset = await db.get(Asset, link.target_id)
