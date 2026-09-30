@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { PROCESSING_STATES } from "@/components/assets/state-badge";
+import { DeleteProject } from "@/components/projects/delete-project";
 import { SitesPanel } from "@/components/projects/sites-panel";
 import { TaxonomyPanel } from "@/components/projects/taxonomy-panel";
 import { LinkButton } from "@/components/ui/button";
@@ -87,6 +88,8 @@ export default function ProjectOverviewPage() {
         <SitesPanel projectId={projectId} canEdit={hasRole(me?.role, "manager")} />
         <TaxonomyPanel projectId={projectId} />
       </div>
+
+      {hasRole(me?.role, "manager") && <DeleteProject projectId={projectId} name={p.name} mediaCount={p.stats?.assets_total ?? 0} />}
     </>
   );
 }

@@ -17,6 +17,7 @@ EXPIRE_STALE_UPLOADS = "evidentia.maintenance.expire_stale_uploads"
 REINDEX_ASSET = "evidentia.search.reindex_asset"
 REINDEX_PROJECT = "evidentia.search.reindex_project"
 SYNC_REVIEW_TO_CLOUDINARY = "evidentia.cloudinary.sync_review"
+DELETE_CLOUDINARY_MEDIA = "evidentia.cloudinary.delete_media"
 RENDER_REPORT_PDF = "evidentia.reports.render_pdf"
 INGEST_SPEECH = "evidentia.pipeline.ingest_speech"
 ANALYZE_PAIR = "evidentia.before_after.analyze_pair"
@@ -34,6 +35,7 @@ TASK_ROUTES = {
     REINDEX_ASSET: {"queue": QUEUE_ANALYSIS},
     REINDEX_PROJECT: {"queue": QUEUE_MAINTENANCE},
     SYNC_REVIEW_TO_CLOUDINARY: {"queue": QUEUE_MAINTENANCE},
+    DELETE_CLOUDINARY_MEDIA: {"queue": QUEUE_MAINTENANCE},
     RENDER_REPORT_PDF: {"queue": QUEUE_REPORTS},
     INGEST_SPEECH: {"queue": QUEUE_ANALYSIS},
     ANALYZE_PAIR: {"queue": QUEUE_ML},

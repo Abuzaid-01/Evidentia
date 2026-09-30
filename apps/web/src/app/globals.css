@@ -83,3 +83,14 @@ body {
 ::selection {
   background: var(--accent-soft);
 }
+
+/* Tailwind 4 resets button cursors to the default arrow: clickable things should look clickable. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled) {
+    cursor: pointer;
+  }
+}

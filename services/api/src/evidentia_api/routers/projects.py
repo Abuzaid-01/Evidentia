@@ -4,7 +4,7 @@ import uuid
 
 from evidentia_core.db.models import Project, Site, Taxonomy
 from evidentia_core.domain.taxonomy import PRESETS, TaxonomySpec
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, Request, status
 from sqlalchemy import select
 
 from evidentia_api.deps import CloudinaryDep, Manager, RequestId, SettingsDep, TenantDB, Viewer
@@ -12,6 +12,7 @@ from evidentia_api.errors import Unprocessable
 from evidentia_api.schemas.analytics import ProjectAnalyticsOut
 from evidentia_api.schemas.projects import (
     ProjectCreate,
+    ProjectDeleteOut,
     ProjectOut,
     ProjectUpdate,
     SiteCreate,
@@ -23,7 +24,7 @@ from evidentia_api.schemas.projects import (
 )
 from evidentia_api.schemas.spatial import SpatialTemporalOut
 from evidentia_api.services import analytics as analytics_svc
-from evidentia_api.services import audit
+from evidentia_api.services import audit, project_deletion
 from evidentia_api.services import projects as svc
 from evidentia_api.services import spatial as spatial_svc
 
@@ -86,6 +87,29 @@ async def update_project(
     await db.commit()
     await db.refresh(project)
     return ProjectOut.model_validate(project)
+
+
+@router.delete("/projects/{project_id}", response_model=ProjectDeleteOut)
+async def delete_project(
+    project_id: uuid.UUID,
+    principal: Manager,
+    db: TenantDB,
+    request: Request,
+    rid: RequestId,
+    confirm_name: str = Query(
+        min_length=1, description="The project's exact name, as confirmation"
+    ),
+) -> ProjectDeleteOut:
+    """Permanently delete the project and everything in it (photos, claims, reports), then remove
+    its files from Cloudinary in the background. Audited; cannot be undone."""
+    return await project_deletion.delete_project(
+        db,
+        principal,
+        project_id,
+        confirm_name,
+        cloudinary_ready=request.app.state.cloudinary is not None,
+        rid=rid,
+    )
 
 
 @router.get("/projects/{project_id}/spatial-temporal", response_model=SpatialTemporalOut)

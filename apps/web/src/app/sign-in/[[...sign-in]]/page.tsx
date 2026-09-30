@@ -12,10 +12,12 @@ function DevSignIn() {
   const router = useRouter();
   return (
     <div className="w-full max-w-md">
-      <div className="mb-6 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
-        <strong>Local dev mode.</strong> Pick a persona. The API only accepts these identities when it runs with
-        <code className="mx-1 font-mono">ENVIRONMENT=local</code>. Set
-        <code className="mx-1 font-mono">AUTH_MODE=clerk</code> for real sign-in.
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold">Welcome to Evidentia</h2>
+        <p className="mt-1 text-sm text-text-muted">
+          No password needed. <b className="text-text">New here? Use Start demo</b>: the fastest, easiest way to see
+          the whole idea in a few clicks.
+        </p>
       </div>
       <button
         type="button"
@@ -31,7 +33,11 @@ function DevSignIn() {
         </div>
         <Play className="size-5" />
       </button>
-      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-text-subtle">Or sign in as a team member (full workflow)</p>
+      <p className="mb-1 text-xs font-medium uppercase tracking-wider text-text-subtle">Or explore the full real-world workflow</p>
+      <p className="mb-3 text-xs text-text-muted">
+        Sign in as a team member: field worker uploads, reviewer verifies, manager approves and publishes, just like a
+        real organisation.
+      </p>
       <div className="flex flex-col gap-2">
         {DEV_PERSONAS.map((persona) => (
           <button

@@ -200,3 +200,17 @@ def upload_authenticated_raw(
         context=context or {},
     )
     return dict(response)
+
+
+@translate_sdk_errors
+def delete_authenticated(public_ids: list[str], resource_type: str) -> dict[str, str]:
+    """Permanently delete private assets (and all their derived renditions) from Cloudinary.
+    At most 100 ids per call (API limit). Returns {public_id: "deleted" | "not_found"}."""
+    if not public_ids:
+        return {}
+    if len(public_ids) > 100:
+        raise ValueError("delete_authenticated accepts at most 100 public_ids per call")
+    response = cloudinary.api.delete_resources(
+        public_ids, type="authenticated", resource_type=resource_type, invalidate=True
+    )
+    return {str(k): str(v) for k, v in (response.get("deleted") or {}).items()}

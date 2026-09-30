@@ -99,3 +99,12 @@ class TaxonomyUpdate(ApiModel):
 class TaxonomyPresetOut(ApiModel):
     name: str
     activities: list[Activity]
+
+
+class ProjectDeleteOut(ApiModel):
+    project_id: uuid.UUID
+    name: str
+    assets: int
+    claims: int
+    reports: int
+    cloudinary_files_queued: int

@@ -6,6 +6,31 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/healthz": {
       "get": {
         "tags": [
@@ -241,6 +266,60 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Delete Project",
+        "description": "Permanently delete the project and everything in it (photos, claims, reports), then remove\nits files from Cloudinary in the background. Audited; cannot be undone.",
+        "operationId": "delete_project_v1_projects__project_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "confirm_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The project's exact name, as confirmation",
+              "title": "Confirm Name"
+            },
+            "description": "The project's exact name, as confirmation"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDeleteOut"
                 }
               }
             }
@@ -8825,6 +8904,45 @@
           "name"
         ],
         "title": "ProjectCreate"
+      },
+      "ProjectDeleteOut": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "assets": {
+            "type": "integer",
+            "title": "Assets"
+          },
+          "claims": {
+            "type": "integer",
+            "title": "Claims"
+          },
+          "reports": {
+            "type": "integer",
+            "title": "Reports"
+          },
+          "cloudinary_files_queued": {
+            "type": "integer",
+            "title": "Cloudinary Files Queued"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "name",
+          "assets",
+          "claims",
+          "reports",
+          "cloudinary_files_queued"
+        ],
+        "title": "ProjectDeleteOut"
       },
       "ProjectOut": {
         "properties": {
