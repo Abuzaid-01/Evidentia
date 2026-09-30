@@ -23,7 +23,8 @@ from typing import Any
 from evidentia_core.domain.claims import numbers_in
 from evidentia_core.domain.enums import CitationKind, ClaimType
 
-MANIFEST_VERSION = "report-manifest/1"
+# /2: timeline of photo captures and approvals, AI models used (rendered by report_v2 template)
+MANIFEST_VERSION = "report-manifest/2"
 
 # Narrative sections are prose (checked); the other sections are rendered from structured data.
 NARRATIVE_SECTIONS: tuple[str, ...] = ("summary", "overview")

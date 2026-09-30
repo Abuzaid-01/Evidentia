@@ -7,10 +7,13 @@ import pytest
 from evidentia_core.domain.reports import MANIFEST_VERSION, manifest_hash
 from evidentia_reporting import PdfRendererUnavailable, html_to_pdf, render_html
 
+# the fixture below is a format-1 manifest (published before the report redesign)
+LEGACY_FORMAT = "report-manifest/1"
+
 
 def manifest(**overrides: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
-        "manifest_version": MANIFEST_VERSION,
+        "manifest_version": LEGACY_FORMAT,
         "report": {
             "id": "r1",
             "title": "Water access <Q3>",
@@ -239,3 +242,74 @@ def test_before_after_comparison_renders_with_composite_and_limitations() -> Non
     assert "E. How this report was produced" in html
     # the pair's photo is shown as the composite, not again as a single gallery figure
     assert 'id="fig-A1"' not in html
+
+
+# --- format 2: the redesigned report -------------------------------------------------------------
+
+
+def manifest_v2(**overrides: Any) -> dict[str, Any]:
+    m = manifest(**overrides)
+    m["manifest_version"] = MANIFEST_VERSION
+    m["production"] = {
+        "analysis_models": ["cloudinary/ai_vision_general", "gemini/gemini-2.5-flash"],
+        "validation_models": ["gemini/gemini-3.5-flash-lite"],
+    }
+    m["timeline"] = [
+        {
+            "kind": "photo",
+            "title": "Workers lower a pipe",
+            "starts_on": "2026-08-12T09:00:00+00:00",
+            "ends_on": None,
+            "site": "Village A",
+            "ref": "A1",
+            "evidence_count": 0,
+            "time_source": "upload",
+        },
+        {
+            "kind": "approval",
+            "title": "142 households now collect piped water",
+            "starts_on": "2026-09-29T09:00:00+00:00",
+            "ends_on": None,
+            "site": None,
+            "ref": "C1",
+            "evidence_count": 0,
+            "time_source": None,
+        },
+    ]
+    return m
+
+
+def test_format_2_uses_the_redesigned_template() -> None:
+    from evidentia_reporting import RENDERER_VERSION, renderer_version
+
+    m = manifest_v2()
+    html = render_html(m)
+    assert html == render_html(copy.deepcopy(m))  # still deterministic
+    assert renderer_version(m) == RENDERER_VERSION != renderer_version(manifest())
+    for text in (
+        "How to read this report",
+        "What was verified",
+        "approved claims",
+        "Claim approved",  # timeline built from approvals...
+        "Photo uploaded",  # ...and from photo dates (no camera time -> upload time)
+        "What this report cannot prove",
+        "Glossary",
+        "cloudinary/ai_vision_general, gemini/gemini-2.5-flash",  # every AI model is named
+        "Households connected: 142 households (M1)",  # the claim card shows its number
+    ):
+        assert text in html, text
+    assert manifest_hash(m) in html
+
+
+def test_format_2_draft_without_text_says_what_to_do() -> None:
+    m = manifest_v2(published=None)
+    m["narrative"]["summary"] = []
+    html = render_html(m)
+    assert "Draft preview" in html and "Generate from claims" in html
+
+
+def test_unknown_format_is_rejected() -> None:
+    m = manifest_v2()
+    m["manifest_version"] = "report-manifest/99"
+    with pytest.raises(ValueError, match="no report template"):
+        render_html(m)

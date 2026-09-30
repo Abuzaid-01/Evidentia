@@ -388,7 +388,7 @@ async def test_confirmed_pair_backs_a_claim_and_appears_in_reports(
             "html"
         ]
         assert 'id="B1"' in html and "Before and after" in html
-        assert "D. Before/after comparisons" in html and "E. How this report was produced" in html
+        assert "D. Before/after measurements" in html and "How this report was produced" in html
         assert comparison["limitations"][0] in html
         verify = (await client.get(f"/v1/reports/{rid}/snapshots/1/verify", headers=author)).json()
         assert verify["identical"] is True

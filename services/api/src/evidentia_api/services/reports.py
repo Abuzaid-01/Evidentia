@@ -70,7 +70,7 @@ from evidentia_core.domain.reports import (
     sha256_hex,
     split_sentences,
 )
-from evidentia_reporting import RENDERER_VERSION, render_html
+from evidentia_reporting import RENDERER_VERSION, render_html, renderer_version
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -849,6 +849,7 @@ async def build_manifest(
             "site": site_name(e.site_id),
             "ref": None,
             "evidence_count": int(counts.get(e.id, 0)),
+            "time_source": None,
         }
         for e in events
         if (report.site_id is None or e.site_id in (report.site_id, None))
@@ -863,11 +864,45 @@ async def build_manifest(
             "site": site_name(c.site_id),
             "ref": claim_ref[c.id],
             "evidence_count": 0,
+            "time_source": None,
         }
         for c in claims
         if c.period_start or c.period_end
     ]
-    timeline.sort(key=lambda t: (t["starts_on"] or t["ends_on"] or "9999", t["title"]))
+    # when each photo was taken (or uploaded, when it carries no camera time) ...
+    timeline += [
+        {
+            "kind": "photo",
+            "title": a["caption"] or a["original_filename"] or "Field photo",
+            "starts_on": a["capture_time"],
+            "ends_on": None,
+            "site": a["site"],
+            "ref": a["ref"],
+            "evidence_count": 0,
+            "time_source": a["capture_time_source"],
+        }
+        for a in asset_entries
+        if a["capture_time"]
+    ]
+    # ... and when a second person approved each claim
+    timeline += [
+        {
+            "kind": "approval",
+            "title": c["statement"],
+            "starts_on": c["approved_at"],
+            "ends_on": None,
+            "site": c["site"],
+            "ref": c["ref"],
+            "evidence_count": 0,
+            "time_source": None,
+        }
+        for c in claim_entries
+        if c["approved_at"]
+    ]
+    kind_order = {"event": 0, "claim": 1, "photo": 2, "approval": 3}
+    timeline.sort(
+        key=lambda t: (t["starts_on"] or t["ends_on"] or "9999", kind_order[t["kind"]], t["title"])
+    )
 
     # narrative: only sentences that pass the checks; cites become refs
     ref_of = {str(c.id): claim_ref[c.id] for c in claims} | {
@@ -918,6 +953,22 @@ async def build_manifest(
         "assets": asset_entries,
         "comparisons": comparison_entries,
         "timeline": timeline,
+        "production": {
+            "analysis_models": sorted(
+                {
+                    f"{e['observation']['run']['provider']}/{e['observation']['run']['model']}"
+                    for e in evidence_entries
+                    if e["observation"] and e["observation"].get("run")
+                }
+            ),
+            "validation_models": sorted(
+                {
+                    f"{c['validation']['provider']}/{c['validation']['model']}"
+                    for c in claim_entries
+                    if c["validation"] and c["validation"].get("model")
+                }
+            ),
+        },
     }
     manifest["limitations"] = [
         {"text": item["text"], "cites": [ref_of[c["id"]] for c in item["cites"]]}
@@ -1071,7 +1122,7 @@ async def publish(
         manifest=manifest,
         manifest_sha256=manifest_hash(manifest),
         html_sha256=sha256_hex(html),
-        renderer_version=RENDERER_VERSION,
+        renderer_version=renderer_version(manifest),
         published_by_id=principal.user_id,
         published_at=now,
         pdf_status=PdfStatus.PENDING if cloudinary_ready else PdfStatus.SKIPPED,

@@ -245,7 +245,7 @@ async def test_report_lifecycle_publish_verify_and_immutability(
     assert r.json()["narrative_meta"]["edited_by"] == "Ravi"
 
     preview = (await client.get(f"/v1/reports/{rid}/preview", headers=author)).json()
-    assert "DRAFT PREVIEW" in preview["html"] and 'href="#M1"' in preview["html"]
+    assert "Draft preview" in preview["html"] and 'href="#M1"' in preview["html"]
     assert preview["problems"] == []
 
     assert (await client.post(f"/v1/reports/{rid}/publish", headers=author)).status_code == 403

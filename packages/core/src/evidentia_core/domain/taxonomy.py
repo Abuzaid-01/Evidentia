@@ -237,6 +237,45 @@ PRESETS: dict[str, TaxonomySpec] = {
             ),
         ]
     ),
+    "urban_sanitation": TaxonomySpec(
+        activities=[
+            _a(
+                "drain_opening",
+                "Drain / manhole opening",
+                "A manhole lid, grate or drain slab is being lifted or has been removed.",
+                "Is a manhole cover, grate or drain slab being lifted or already removed?",
+                0,
+            ),
+            _a(
+                "drain_desilting",
+                "Drain desilting",
+                "Silt, sludge, garbage or blockages are being removed from a drain or sewer.",
+                "Is someone removing silt, sludge, garbage or a blockage from a drain or sewer?",
+                1,
+            ),
+            _a(
+                "safety_measures",
+                "Safety measures",
+                "Workers wear safety vests, helmets or gloves, or warning signage is visible.",
+                "Are workers wearing safety vests, helmets or gloves, or is warning signage visible?",
+                2,
+            ),
+            _a(
+                "unsafe_manual_entry",
+                "Unsafe manual entry",
+                "A person is inside a drain, sewer or manhole without protective equipment.",
+                "Is a person standing inside a drain, sewer or manhole without protective equipment?",
+                3,
+            ),
+            _a(
+                "debris_removed",
+                "Debris removed",
+                "Removed silt or garbage is piled beside the drain, or the drain looks clear.",
+                "Is removed silt or garbage piled beside the drain, or does the drain look cleared?",
+                4,
+            ),
+        ]
+    ),
 }
 
 DEFAULT_PRESET = "water_infrastructure"

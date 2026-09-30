@@ -1,0 +1,324 @@
+{# Report template for manifest format 2. Frozen once snapshots use it: redesigns get a new format. #}
+{% macro cites(refs) %}{% for r in refs %}<a class="cite" href="#{{ r }}">{{ r }}</a>{% endfor %}{% endmacro %}
+{% macro sentences(items, empty) %}
+{% if items %}
+<p class="prose">{% for s in items %}{{ s.text }} {{ cites(s.cites) }} {% endfor %}</p>
+{% else %}
+<p class="muted">{{ empty }}</p>
+{% endif %}
+{% endmacro %}
+{% set draft_without_text = not m.published and not m.narrative.summary and not m.narrative.overview %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ m.report.title }}</title>
+<style>
+  :root { --ink: #16201b; --muted: #5b6660; --line: #dfe5e1; --soft: #f3f6f4; --green: #1f7a57; --green-soft: #e6f3ec; --amber: #9a5b00; --amber-soft: #fdf3e2; --red: #a3342b; }
+  * { box-sizing: border-box; }
+  body { margin: 0 auto; max-width: 860px; padding: 32px 36px 48px; color: var(--ink); font: 10.5pt/1.55 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; background: #fff; }
+  h1, h2, .serif { font-family: Georgia, "Times New Roman", serif; }
+  h1 { font-size: 25pt; line-height: 1.15; margin: 6px 0 8px; }
+  h2 { font-size: 15pt; margin: 34px 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--ink); break-after: avoid; }
+  h2 .num { color: var(--green); margin-right: 6px; }
+  h3 { font-size: 10.5pt; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  p { margin: 0 0 8px; }
+  a { color: var(--green); }
+  .muted, .small { color: var(--muted); font-size: 9pt; }
+  .mono { font-family: Menlo, Consolas, monospace; font-size: 7.5pt; word-break: break-all; }
+  .prose { font-family: Georgia, "Times New Roman", serif; font-size: 12pt; line-height: 1.65; }
+  a.cite { display: inline-block; font: 600 7.5pt/1.4 Helvetica, Arial, sans-serif; color: var(--green); background: var(--green-soft); border-radius: 4px; padding: 0 4px; margin-left: 2px; vertical-align: 2px; text-decoration: none; }
+  .eyebrow { font-size: 8.5pt; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--green); }
+  .cover { border-bottom: 1px solid var(--line); padding-bottom: 18px; }
+  .cover .meta { color: var(--muted); font-size: 9.5pt; }
+  .stamp { display: inline-block; font-size: 8.5pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; margin-top: 10px; }
+  .stamp.ok { color: var(--green); background: var(--green-soft); border: 1px solid #b9dcc9; }
+  .stamp.draft { color: var(--amber); background: var(--amber-soft); border: 1px solid #efd3a4; }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0 6px; }
+  .tile { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--soft); }
+  .tile b { display: block; font: 700 20pt/1.1 Georgia, serif; color: var(--ink); }
+  .tile span { font-size: 8.5pt; color: var(--muted); }
+  .facts { font-size: 9pt; color: var(--muted); margin-top: 6px; }
+  .howto { margin: 18px 0 4px; border: 1px solid var(--line); border-left: 4px solid var(--green); border-radius: 8px; padding: 12px 14px; background: #fbfcfb; font-size: 9pt; }
+  .howto ul { margin: 6px 0 0; padding-left: 18px; } .howto li { margin: 2px 0; }
+  .callout { border-radius: 8px; padding: 10px 12px; font-size: 9.5pt; margin: 8px 0; }
+  .callout.amber { background: var(--amber-soft); color: var(--amber); }
+  .claim { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 10px 0; break-inside: avoid; }
+  .claim .head { display: flex; gap: 10px; align-items: baseline; }
+  .claim .ref { font: 700 9pt Helvetica, Arial, sans-serif; color: #fff; background: var(--green); border-radius: 5px; padding: 1px 6px; }
+  .claim .statement { font: 12pt/1.4 Georgia, serif; }
+  .chips { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: 8.5pt; }
+  .chip { border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--muted); background: #fff; }
+  .chip.good { color: var(--green); border-color: #b9dcc9; background: var(--green-soft); }
+  .chip.warn { color: var(--amber); border-color: #efd3a4; background: var(--amber-soft); }
+  .thumbs { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .thumbs img, .thumbs .noimg { width: 132px; height: 92px; object-fit: cover; border-radius: 6px; background: #e9eeeb; }
+  .timeline { list-style: none; margin: 0; padding: 0 0 0 18px; border-left: 2px solid var(--line); }
+  .timeline li { position: relative; padding: 0 0 12px 12px; break-inside: avoid; }
+  .timeline li::before { content: ""; position: absolute; left: -25px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid var(--green); }
+  .timeline li.approval::before { background: var(--green); }
+  .timeline .when { font-size: 8.5pt; font-weight: 600; color: var(--muted); }
+  .timeline .kind { font-size: 7.5pt; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--green); margin-left: 6px; }
+  .gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  figure { margin: 0; break-inside: avoid; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  figure img { width: 100%; height: 190px; object-fit: cover; display: block; background: #e9eeeb; }
+  figcaption { padding: 8px 10px; font-size: 8.5pt; color: var(--muted); }
+  figcaption .cap { color: var(--ink); font-size: 9pt; }
+  .noimg { display: flex; align-items: center; justify-content: center; text-align: center; color: #7a857f; font-size: 8pt; padding: 6px; }
+  figure .noimg { height: 190px; background: #e9eeeb; }
+  figure.pair img { height: auto; } figure.pair .noimg { height: 120px; } figure.pair ul { margin: 4px 0 0; padding-left: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  th { text-align: left; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--ink); padding: 4px 6px 4px 0; }
+  td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: 5px 6px 5px 0; }
+  .limits li { margin: 4px 0; }
+  .item { break-inside: avoid; margin-bottom: 10px; font-size: 9pt; }
+  dl.glossary { display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; font-size: 9pt; }
+  dl.glossary dt { font-weight: 700; } dl.glossary dd { margin: 0; color: var(--muted); }
+  footer { margin-top: 30px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 8.5pt; color: var(--muted); }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="eyebrow">Evidence report · Evidentia</div>
+  <h1>{{ m.report.title }}</h1>
+  <div class="meta">
+    {{ m.report.project.name }}{% if m.report.site %} · {{ m.report.site.name }}{% endif %}
+    · Reporting period: {{ period(m.report.period_start, m.report.period_end) }}
+    · {{ m.report.audience | capitalize }} report
+  </div>
+  {% if m.published %}
+  <span class="stamp ok">Published · version {{ m.published.version }} · {{ m.published.published_at | date }} · by {{ m.published.published_by.name }}</span>
+  {% else %}
+  <span class="stamp draft">Draft preview · not published</span>
+  {% endif %}
+
+  <div class="tiles">
+    <div class="tile"><b>{{ glance.claims }}</b><span>approved claims</span></div>
+    <div class="tile"><b>{{ glance.photos }}</b><span>photos as evidence</span></div>
+    <div class="tile"><b>{{ glance.metrics }}</b><span>sourced numbers</span></div>
+    <div class="tile"><b>{{ glance.approvers | length }}</b><span>independent approver{{ "s" if glance.approvers | length != 1 else "" }}</span></div>
+  </div>
+  <div class="facts">
+    {% if glance.first_capture %}Evidence dated {{ glance.first_capture | date }}{% if glance.last_capture != glance.first_capture %} to {{ glance.last_capture | date }}{% endif %}.{% endif %}
+    {% if glance.sites %} Sites: {{ glance.sites | join(", ") }}.{% endif %}
+    {% if glance.approvers %} Approved by: {{ glance.approvers | join(", ") }}.{% endif %}
+  </div>
+
+  <div class="howto">
+    <b>How to read this report.</b> Nothing here is just asserted: every statement links to its proof.
+    <ul>
+      <li><a class="cite">C1</a> is an <b>approved claim</b>: a statement checked against photo evidence and approved by someone other than its author. Click it to see the claim, its photos and who approved it.</li>
+      <li><a class="cite">M1</a> is a <b>measured number</b> with a declared source and method. No number appears unless a metric backs it.</li>
+      <li><b>A1, A2…</b> are the original photos, stored privately in Cloudinary and never altered; every image shown names the exact transformation used.</li>
+      <li>This report is frozen once published: re-rendering it from its record must reproduce it exactly (fingerprint at the end).</li>
+      {% if m.report.audience == "external" %}<li>Faces are pixelated in every image, and precise locations are withheld.</li>{% endif %}
+    </ul>
+  </div>
+</header>
+
+{% if draft_without_text %}
+<div class="callout amber">The written summary has not been generated yet. In Evidentia, open this report and click <b>Generate from claims</b>, then publish.</div>
+{% endif %}
+
+<h2><span class="num">1</span>{{ sections.summary }}</h2>
+{{ sentences(m.narrative.summary, "No summary yet.") }}
+
+<h2><span class="num">2</span>What was verified</h2>
+<p class="small">Each claim below was written by the team, backed by photo evidence that a person verified, and approved by a second person.</p>
+{% for c in m.claims %}
+<div class="claim">
+  <div class="head"><span class="ref">{{ c.ref }}</span><span class="statement">{{ c.statement }}</span></div>
+  <div class="chips">
+    <span class="chip">{{ c.claim_type | capitalize }} claim</span>
+    <span class="chip good">Approved by {{ c.approved_by.name }}{% if c.approved_at %} · {{ c.approved_at | date }}{% endif %}</span>
+    {% if c.validation %}
+    <span class="chip {{ 'good' if c.validation.verdict == 'supported' else 'warn' if c.validation.verdict in ('partially_supported', 'not_supported') else '' }}">AI check: {{ c.validation.verdict | label }}</span>
+    {% endif %}
+    {% for r in c.metric_refs %}<span class="chip good">{{ metrics[r].name }}: {{ metrics[r].value }} {{ metrics[r].unit or "" }} ({{ r }})</span>{% endfor %}
+    {% if c.site %}<span class="chip">{{ c.site }}</span>{% endif %}
+  </div>
+  {% if claim_photos[c.ref] %}
+  <div class="thumbs">
+    {% for a in claim_photos[c.ref] %}
+    {% if assets[a].figure and assets[a].figure.url %}<a href="#fig-{{ a }}"><img src="{{ assets[a].figure.url }}" alt="{{ a }}"></a>{% else %}<div class="noimg">{{ a }}</div>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<p class="muted">No approved claims are included yet.</p>
+{% endfor %}
+
+<h2><span class="num">3</span>{{ sections.overview }}</h2>
+{{ sentences(m.narrative.overview, "No further detail beyond the summary.") }}
+
+<h2><span class="num">4</span>{{ sections.timeline }}</h2>
+{% if m.timeline %}
+<ul class="timeline">
+  {% for t in m.timeline %}
+  <li class="{{ t.kind }}">
+    <span class="when">{{ t.starts_on | date }}{% if t.ends_on %} to {{ t.ends_on | date }}{% endif %}</span>
+    <span class="kind">{% if t.kind == "photo" %}Photo {{ "taken" if t.time_source in ("exif", "device") else "uploaded" }}{% elif t.kind == "approval" %}Claim approved{% elif t.kind == "claim" %}Claimed period{% else %}Activity{% endif %}</span><br>
+    {{ t.title }}{% if t.site %} <span class="small">· {{ t.site }}</span>{% endif %}
+    {% if t.ref %}{{ cites([t.ref]) }}{% elif t.evidence_count %} <span class="small">({{ t.evidence_count }} media)</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% if m.timeline | selectattr("kind", "equalto", "photo") | rejectattr("time_source", "in", ["exif", "device"]) | list %}
+<p class="small">"Uploaded" means the photo carried no camera timestamp, so its upload time is shown instead.</p>
+{% endif %}
+{% else %}
+<p class="muted">No dated events.</p>
+{% endif %}
+
+<h2><span class="num">5</span>{{ sections.gallery }}</h2>
+{% if figures %}
+<div class="gallery">
+  {% for f in figures %}
+  <figure id="fig-{{ f.asset.ref }}">
+    {% if f.asset.figure and f.asset.figure.url %}
+    <img src="{{ f.asset.figure.url }}" alt="{{ f.asset.caption or f.asset.original_filename or f.asset.ref }}">
+    {% else %}
+    <div class="noimg">{{ f.asset.resource_type | capitalize }} evidence {{ f.asset.ref }}<br>not shown in this report</div>
+    {% endif %}
+    <figcaption>
+      <div class="cap"><b>{{ f.asset.ref }}</b> · {{ f.asset.caption or f.asset.original_filename or "untitled" }}</div>
+      {{ "Taken" if f.asset.capture_time_source in ("exif", "device") else "Uploaded" }} {{ f.asset.capture_time | date }}{% if f.asset.site %} · {{ f.asset.site }}{% endif %}{% if f.evidence.span %} · {{ f.evidence.span | span_label }}{% endif %}<br>
+      Proves {% for r in proves[f.asset.ref] %}{{ cites([r]) }} {{ claims[r].statement }}{% if not loop.last %}; {% endif %}{% endfor %}
+    </figcaption>
+  </figure>
+  {% endfor %}
+</div>
+{% if hidden_figures %}<p class="small">{{ hidden_figures }} more supporting media items are listed in the appendix.</p>{% endif %}
+{% elif not comparisons %}
+<p class="muted">No supporting media.</p>
+{% endif %}
+{% if comparisons %}
+<h3>Before and after</h3>
+<p class="small">Pairs of photos of the same place on two dates, matched and aligned by feature geometry and confirmed by a reviewer. They show visible change only; each lists its own limitations.</p>
+{% for b in comparisons %}
+<figure class="pair" id="{{ b.ref }}">
+  {% if b.figure and b.figure.url %}
+  <img src="{{ b.figure.url }}" alt="Before and after comparison {{ b.ref }}">
+  {% else %}
+  <div class="noimg">Comparison {{ b.ref }} not rendered in this report</div>
+  {% endif %}
+  <figcaption>
+    <b>{{ b.ref }}</b> · before <a href="#{{ b.before_asset_ref }}">{{ b.before_asset_ref }}</a> {{ assets[b.before_asset_ref].capture_time | date }} · after <a href="#{{ b.after_asset_ref }}">{{ b.after_asset_ref }}</a> {{ assets[b.after_asset_ref].capture_time | date }}{% if assets[b.after_asset_ref].site %} · {{ assets[b.after_asset_ref].site }}{% endif %}<br>
+    {{ b.change.summary }} Alignment: {{ b.alignment.grade }}. Confirmed by {{ b.confirmed_by.name }}{% if b.decision_note %} (“{{ b.decision_note }}”){% endif %} · supports {{ cites(b.claim_refs) }}
+    <ul>{% for l in b.limitations %}<li>{{ l }}</li>{% endfor %}</ul>
+  </figcaption>
+</figure>
+{% endfor %}
+{% endif %}
+
+<h2><span class="num">6</span>{{ sections.metrics }}</h2>
+{% if m.metrics %}
+<table>
+  <tr><th>Ref</th><th>What was measured</th><th>Value</th><th>Period</th><th>How it was measured</th><th>Source</th></tr>
+  {% for x in m.metrics %}
+  <tr id="{{ x.ref }}">
+    <td><b>{{ x.ref }}</b></td><td>{{ x.name }}{% if x.site %} ({{ x.site }}){% endif %}</td>
+    <td><b>{{ x.value }}</b> {{ x.unit or "" }}</td><td>{{ period(x.period_start, x.period_end) }}</td>
+    <td>{{ x.method }}</td><td>{{ x.source_type | label }}: {{ x.source_reference }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="muted">This report states no numbers, so no metrics are needed.</p>
+{% endif %}
+
+<h2><span class="num">7</span>What this report cannot prove</h2>
+<p class="small">These limitations are derived by fixed rules from the evidence itself, not written by an AI, so they cannot be softened.</p>
+{% if m.limitations %}
+<ul class="limits">{% for s in m.limitations %}<li>{{ s.text }} {{ cites(s.cites) }}</li>{% endfor %}</ul>
+{% else %}
+<p class="muted">No specific limitations were derived from the evidence.</p>
+{% endif %}
+
+<h2><span class="num">8</span>{{ sections.appendix }}</h2>
+<h3>A. Claims in detail</h3>
+{% for c in m.claims %}
+<div class="item" id="{{ c.ref }}">
+  <b>{{ c.ref }}</b> · {{ c.statement }}
+  <div class="small">
+    {{ c.claim_type | capitalize }} claim{% if c.site %} · {{ c.site }}{% endif %} · period {{ period(c.period_start, c.period_end) }}
+    · written by {{ c.author.name }} · approved by {{ c.approved_by.name }} on {{ c.approved_at | date }}{% if c.decision_note %} (“{{ c.decision_note }}”){% endif %}<br>
+    AI check: {% if c.validation %}{{ c.validation.verdict | label }}{% if c.validation.model %} by {{ c.validation.provider }}/{{ c.validation.model }}{% endif %}{% else %}not run{% endif %}
+    · evidence {% for r in c.evidence_refs %}<a class="cite" href="#{{ r }}">{{ r }}</a>{% else %}none{% endfor %}
+    · metrics {% for r in c.metric_refs %}<a class="cite" href="#{{ r }}">{{ r }}</a>{% else %}none{% endfor %}
+    {% if c.app_url %}· <a href="{{ c.app_url }}">open in Evidentia</a>{% endif %}
+  </div>
+</div>
+{% endfor %}
+
+<h3>B. Evidence links: which photo proves what</h3>
+<table>
+  <tr><th>Ref</th><th>Claim</th><th>Relation</th><th>Photo</th><th>What the photo shows, and who established it</th></tr>
+  {% for e in m.evidence %}
+  <tr id="{{ e.ref }}">
+    <td><b>{{ e.ref }}</b></td><td>{{ cites([e.claim_ref]) }}</td><td>{{ e.relation }}</td>
+    <td><a href="#{{ e.asset_ref }}">{{ e.asset_ref }}</a></td>
+    <td>
+      {% if e.observation %}
+      {{ e.observation.ontology_type }} “{{ e.observation.subject | label }}” {{ e.observation.predicate }},
+      {{ e.observation.status }}{% if e.observation.confidence is not none %}, confidence {{ "%.2f" | format(e.observation.confidence) }}{% endif %};
+      {% if e.observation.run %}{{ e.observation.source_kind }}: {{ e.observation.run.provider }}/{{ e.observation.run.model }}{% if e.observation.run.prompt_version %}, prompt {{ e.observation.run.prompt_version }}{% endif %}{% if e.observation.run.taxonomy_version %}, taxonomy v{{ e.observation.run.taxonomy_version }}{% endif %}{% else %}{{ e.observation.source_kind }}{% if e.observation.source_provider %} ({{ e.observation.source_provider }}){% endif %}{% endif %}
+      {% elif e.pair_ref is defined and e.pair_ref %}before/after comparison <a href="#{{ e.pair_ref }}">{{ e.pair_ref }}</a> (confirmed by a reviewer){% else %}the whole photo, reviewed by a person{% endif %}
+      {% if e.note %}<br><i>{{ e.note }}</i>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h3>C. Original photos (Cloudinary provenance)</h3>
+<table>
+  <tr><th>Ref</th><th>File</th><th>Date</th><th>Cloudinary asset and rendition</th></tr>
+  {% for a in m.assets %}
+  <tr id="{{ a.ref }}">
+    <td><b>{{ a.ref }}</b></td>
+    <td>{{ a.original_filename or "—" }}<br><span class="small">{{ a.resource_type }}/{{ a.format or "?" }}{% if a.app_url %} · <a href="{{ a.app_url }}">open</a>{% endif %}</span></td>
+    <td>{{ a.capture_time | date }}<br><span class="small">time: {{ a.capture_time_source | label }} · location: {{ a.location_source | label }}</span></td>
+    <td class="mono">{{ a.public_id }}{% if a.cloudinary_version %} v{{ a.cloudinary_version }}{% endif %}{% if a.figure %}<br>{% if a.figure.named_transformation %}t_{{ a.figure.named_transformation }} = {% endif %}{{ a.figure.transformation }}{% endif %}{% if a.sha256 %}<br>sha256 {{ a.sha256 }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% if comparisons %}
+<h3>D. Before/after measurements</h3>
+<p class="small">Visual measurements of the aligned photos. They describe pixels, not outcomes, and are not metrics.</p>
+<table>
+  <tr><th>Ref</th><th>Photos</th><th>Geometry</th><th>Visual measures</th><th>Composite (Cloudinary transformation)</th></tr>
+  {% for b in comparisons %}
+  <tr>
+    <td><b>{{ b.ref }}</b></td>
+    <td><a href="#{{ b.before_asset_ref }}">{{ b.before_asset_ref }}</a> → <a href="#{{ b.after_asset_ref }}">{{ b.after_asset_ref }}</a>{% if b.days_apart is not none %}<br><span class="small">{{ b.days_apart }} days apart</span>{% endif %}</td>
+    <td>{{ b.alignment.grade }}{% if b.alignment.inliers is not none %}<br><span class="small">{{ b.alignment.inliers }} inlier matches ({{ b.alignment.inlier_ratio | pct }}), overlap {{ b.alignment.overlap | pct }} · {{ b.alignment.method }}</span>{% endif %}</td>
+    <td>{% if b.change.changed_share is not none %}changed {{ b.change.changed_share | pct }} of the shared view<br>green cover {{ b.change.green_cover_before | pct }} → {{ b.change.green_cover_after | pct }}<br><span class="small">{{ b.change.method }} · {{ b.analysis_version }}</span>{% else %}not measured{% endif %}</td>
+    <td class="mono">{% if b.figure %}{{ b.figure.transformation }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<footer>
+  <h3>How this report was produced</h3>
+  <p>
+    <b>Photo analysis:</b> {% if m.production.analysis_models %}{{ m.production.analysis_models | join(", ") }}{% else %}by people only{% endif %}.
+    <b>Claim checks:</b> {% if m.production.validation_models %}{{ m.production.validation_models | join(", ") }}{% else %}by people only (no AI check ran){% endif %}.
+    <b>Written text:</b> {% if m.narrative.generator.model %}{{ m.narrative.generator.provider }}/{{ m.narrative.generator.model }}{% elif m.narrative.generator.mode == "fallback" %}the approved claim statements, word for word{% else %}{{ m.narrative.generator.mode | default("manual") }}{% endif %}{% if m.narrative.generator.edited_by %}, edited by {{ m.narrative.generator.edited_by }}{% endif %}.
+  </p>
+  <p>Every sentence passed automatic citation and number checks before publishing. Limitations come from fixed rules, not from an AI.</p>
+  <h3>Glossary</h3>
+  <dl class="glossary">
+    <dt>Observation</dt><dd>What a photo appears to show, found by AI and confirmed by a person.</dd>
+    <dt>Claim</dt><dd>A statement the organisation makes, backed by verified observations and approved by a second person.</dd>
+    <dt>Metric</dt><dd>A measured number with a declared source and method.</dd>
+    <dt>Fingerprint</dt><dd>A SHA-256 hash of this report's frozen record; if anything changed, it would not match.</dd>
+  </dl>
+  <p class="mono" style="margin-top: 10px;">Renderer {{ renderer_version }} · manifest {{ m.manifest_version }} · fingerprint {{ manifest_sha256 }}</p>
+</footer>
+</body>
+</html>
