@@ -199,8 +199,25 @@ export default function ClaimPage() {
       <div className="flex flex-col gap-3">
         {!rulesOk ? (
           <div className="text-text-muted">
-            <p className="font-medium text-text">Add proof first.</p>
-            <ul className="mt-1 list-disc pl-5 text-xs">{rules?.problems?.map((p) => <li key={p}>{p}</li>)}</ul>
+            <p className="font-medium text-text">Not ready to submit yet. Fix this first:</p>
+            <ul className="mt-1 list-disc pl-5 text-xs">
+              {rules?.problems?.map((p) => (
+                <li key={p}>
+                  {p}
+                  <span className="block text-text-subtle">
+                    {p.startsWith("Numbers without")
+                      ? "→ Link a metric under Numbers below, or remove the number from the sentence."
+                      : p.startsWith("Needs at least one")
+                        ? "→ Under Proof, pick a photo and click a green (verified) finding, or a reviewed whole photo."
+                        : p.includes("needs at least one metric")
+                          ? "→ Link a metric under Numbers below (add one on the Claims page if none exist)."
+                          : p.includes("contradict")
+                            ? "→ Verified evidence disagrees with this claim: change the claim or remove that evidence."
+                            : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         ) : (
           <p className="text-text-muted">
