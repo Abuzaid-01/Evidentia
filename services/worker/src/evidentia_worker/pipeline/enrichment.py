@@ -32,6 +32,7 @@ from evidentia_cloudinary import admin
 from evidentia_cloudinary.analyze import (
     MAX_TAG_DEFINITIONS,
     caption_text,
+    cloudinary_tag_name,
     source_uri,
     tagged_names,
 )
@@ -158,12 +159,17 @@ def _cloudinary_native(
     # Taxonomy questions -> AI Vision tagging, in batches of at most 10 definitions.
     for start in range(0, len(activities), MAX_TAG_DEFINITIONS):
         batch = activities[start : start + MAX_TAG_DEFINITIONS]
-        definitions = [{"name": a.key, "description": a.question} for a in batch]
+        definitions = [
+            {"name": cloudinary_tag_name(a.key), "description": a.question} for a in batch
+        ]
+        to_key = {cloudinary_tag_name(a.key): a.key for a in batch}  # back to taxonomy keys
 
-        def tagging(defs: list[dict[str, str]] = definitions) -> RunOutput:
+        def tagging(
+            defs: list[dict[str, str]] = definitions, keys: dict[str, str] = to_key
+        ) -> RunOutput:
             result = guarded(lambda: client.ai_vision_tagging(source, defs))
             return RunOutput(
-                drafts=tagging_drafts(tagged_names(result)),
+                drafts=tagging_drafts([keys.get(n, n) for n in tagged_names(result)]),
                 raw=result.raw.get("data", {}),
                 latency_ms=result.latency_ms,
                 model_version=result.model_version,

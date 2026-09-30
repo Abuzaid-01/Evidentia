@@ -81,3 +81,31 @@ def test_structured_prompt_uses_json_fence() -> None:
     prompt = structured_prompt("Describe", {"type": "object"})
     assert prompt.startswith("Describe\n```json\n")
     assert prompt.endswith("\n```")
+
+
+def test_tag_names_are_made_cloudinary_safe() -> None:
+    from evidentia_cloudinary.analyze import cloudinary_tag_name
+
+    assert cloudinary_tag_name("pipe_installation") == "pipe-installation"
+    assert cloudinary_tag_name("Tank Construction") == "tank-construction"
+    assert cloudinary_tag_name("_edge__case_") == "edge-case"
+
+
+def test_error_message_includes_cloudinary_details() -> None:
+    import httpx
+    from evidentia_cloudinary.analyze import _error_message
+
+    response = httpx.Response(
+        400,
+        json={
+            "error": {
+                "message": "invalid request",
+                "details": {
+                    "message": "Tag names can only contain lower-case alphanumeric characters or hyphens"
+                },
+            }
+        },
+    )
+    assert _error_message(response) == (
+        "invalid request: Tag names can only contain lower-case alphanumeric characters or hyphens"
+    )

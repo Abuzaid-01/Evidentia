@@ -11,6 +11,7 @@ and every call has a non-Cloudinary fallback in the AI layer.
 from __future__ import annotations
 
 import json
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -121,6 +122,15 @@ def caption_text(result: AnalyzeResult) -> str | None:
     return str(value) if value else None
 
 
+_TAG_UNSAFE = re.compile(r"[^a-z0-9-]+")
+
+
+def cloudinary_tag_name(key: str) -> str:
+    """AI Vision tag names may only contain lower-case letters, digits and hyphens
+    (`pipe_installation` -> `pipe-installation`); anything else is rejected with HTTP 400."""
+    return _TAG_UNSAFE.sub("-", key.lower()).strip("-")
+
+
 def tagged_names(result: AnalyzeResult) -> list[str]:
     return [str(t["name"]) for t in result.analysis.get("tags") or [] if t.get("name")]
 
@@ -140,5 +150,10 @@ def _error_message(response: httpx.Response) -> str:
         return response.text[:300]
     error = body.get("error") if isinstance(body, dict) else None
     if isinstance(error, dict):
-        return str(error.get("message", error))[:300]
+        message = str(error.get("message", error))
+        details = error.get("details")
+        # "invalid request" alone is useless; Cloudinary puts the actual reason in details.message
+        if isinstance(details, dict) and details.get("message"):
+            message = f"{message}: {details['message']}"
+        return message[:300]
     return str(body)[:300]
