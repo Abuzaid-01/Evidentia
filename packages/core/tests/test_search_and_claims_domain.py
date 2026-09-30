@@ -195,3 +195,13 @@ def test_support_levels_and_workflow() -> None:
     assert can_move(ClaimStatus.DRAFT, ClaimStatus.IN_REVIEW)
     assert not can_move(ClaimStatus.APPROVED, ClaimStatus.DRAFT)
     assert not can_move(ClaimStatus.DRAFT, ClaimStatus.APPROVED)
+
+
+def test_name_and_address_numbers_are_not_quantities() -> None:
+    # "Street 15" names a place; only counted amounts need a sourced metric
+    assert numbers_in("street 15 is cleaned by the normal people") == []
+    assert numbers_in("Ward 12: 4 drains cleared") == ["4"]
+    assert numbers_in("Site no. 3 and plot #7 got 2 tanks") == ["2"]
+    assert numbers_in("Day 2 of the drive") == []
+    assert numbers_in("15 streets were cleaned") == ["15"]
+    assert numbers_in("all 6 workers were present") == ["6"]

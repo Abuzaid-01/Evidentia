@@ -56,10 +56,52 @@ _NUMBER = re.compile(r"(?<![\w.])(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(%?)(?![\w])"
 _YEARISH = re.compile(r"^(19|20)\d\d$")
 
 
+# A number right after one of these words is a name or an address ("Street 15", "Ward 12",
+# "Site no. 3", "Day 2"), not a quantity, so it needs no metric. "15 streets" is still a quantity.
+_LABEL_WORDS = frozenset(
+    [
+        "street",
+        "st",
+        "road",
+        "rd",
+        "lane",
+        "avenue",
+        "ave",
+        "ward",
+        "sector",
+        "block",
+        "site",
+        "zone",
+        "plot",
+        "house",
+        "building",
+        "gate",
+        "phase",
+        "area",
+        "route",
+        "village",
+        "district",
+        "colony",
+        "section",
+        "unit",
+        "day",
+        "week",
+        "no",
+        "number",
+    ]
+)
+_WORD_BEFORE = re.compile(r"([A-Za-z]+)\.?\s*#?\s*$|(#)\s*$")
+
+
 def numbers_in(statement: str) -> list[str]:
+    """Quantities stated in a sentence (years and name/address numbers excluded)."""
     found = []
-    for raw, _pct in _NUMBER.findall(statement):
+    for match in _NUMBER.finditer(statement):
+        raw = match.group(1)
         if _YEARISH.match(raw):  # dates like 2026 are context, not quantities
+            continue
+        before = _WORD_BEFORE.search(statement[max(0, match.start() - 20) : match.start()])
+        if before and (before.group(2) or before.group(1).lower() in _LABEL_WORDS):
             continue
         found.append(raw)
     return found

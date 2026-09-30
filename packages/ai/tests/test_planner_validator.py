@@ -80,3 +80,47 @@ def test_validator_invalid_answer_is_not_trusted() -> None:
         "x claim", "descriptive", EVIDENCE, [], [MockText({"verdict": "definitely"})]
     )
     assert result.verdict == ValidationVerdict.NOT_CHECKED
+
+
+# --- validator tolerance (real Groq answered unsupported_parts as a string) -------------------------
+
+
+def _validate(llms: list) -> "object":  # type: ignore[type-arg]
+    from evidentia_ai.claim_validator import EvidenceItem, validate_claim
+
+    evidence = [
+        EvidenceItem(id="e1", relation="supports", description="workers visible (verified)")
+    ]
+    return validate_claim("all 6 workers were present", "descriptive", evidence, [], llms)
+
+
+def test_validator_accepts_small_format_differences() -> None:
+    from evidentia_ai.text_llm import MockText
+    from evidentia_core.domain.enums import ValidationVerdict
+
+    groq_style = MockText(
+        {
+            "verdict": "Not Supported",
+            "reasoning": "No count of workers in the evidence.",
+            "unsupported_parts": "all 6 workers",
+            "cited_evidence_ids": "e1",
+        }
+    )
+    result = _validate([groq_style])
+    assert result.verdict == ValidationVerdict.NOT_SUPPORTED
+    assert result.details["unsupported_parts"] == ["all 6 workers"]
+    assert result.details["cited_evidence_ids"] == ["e1"]
+
+
+def test_validator_moves_on_when_an_answer_is_unusable() -> None:
+    from evidentia_ai.text_llm import MockText
+    from evidentia_core.domain.enums import ValidationVerdict
+
+    broken = MockText({"verdict": "maybe?"})
+    good = MockText({"verdict": "supported", "reasoning": "ok", "cited_evidence_ids": ["e1"]})
+    result = _validate([broken, good])
+    assert result.verdict == ValidationVerdict.SUPPORTED
+
+    only_broken = _validate([MockText({"verdict": "maybe?"})])
+    assert only_broken.verdict == ValidationVerdict.NOT_CHECKED
+    assert only_broken.details["reason"] == "invalid LLM answer"

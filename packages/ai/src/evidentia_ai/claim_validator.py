@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from evidentia_core.domain.enums import ValidationVerdict
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from evidentia_ai.text_llm import TextLLM, first_answer
 
@@ -25,10 +25,37 @@ SYSTEM = (
 
 
 class _Answer(BaseModel):
+    """Strict on meaning (the verdict must be one of three), lenient on shape: models differ in small
+    ways (a single string instead of a list, "Partially supported" with a space, a long paragraph),
+    and throwing away a correct verdict over formatting helps nobody."""
+
     verdict: Literal["supported", "partially_supported", "not_supported"]
-    reasoning: str = Field(max_length=2000)
+    reasoning: str = ""
     unsupported_parts: list[str] = Field(default_factory=list)
     cited_evidence_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("verdict", mode="before")
+    @classmethod
+    def _verdict(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip().lower().replace(" ", "_").replace("-", "_")
+        return value
+
+    @field_validator("reasoning", mode="before")
+    @classmethod
+    def _reasoning(cls, value: object) -> str:
+        return ("" if value is None else str(value))[:2000]
+
+    @field_validator("unsupported_parts", "cited_evidence_ids", mode="before")
+    @classmethod
+    def _as_list(cls, value: object) -> list[str]:
+        if value is None or value == "":
+            return []
+        if isinstance(value, str | int):
+            return [str(value)]
+        if isinstance(value, list):
+            return [str(v) for v in value if v not in (None, "")]
+        return value  # type: ignore[return-value]  # let validation report it
 
 
 @dataclass(frozen=True)
@@ -110,17 +137,24 @@ def validate_claim(
             },
         }
     )
-    answer, errors = first_answer(llms, SYSTEM, user)
-    if answer is None:
-        return ValidationResult(
-            ValidationVerdict.NOT_CHECKED, {"reason": "LLM unavailable", "errors": errors}
-        )
-    try:
-        parsed = _Answer.model_validate(answer.data)
-    except ValidationError:
+    # try each provider in turn: a rate limit OR an unusable answer moves on to the next one
+    errors: list[str] = []
+    answer, parsed = None, None
+    for llm in llms:
+        candidate, call_errors = first_answer([llm], SYSTEM, user)
+        errors += call_errors
+        if candidate is None:
+            continue
+        try:
+            answer, parsed = candidate, _Answer.model_validate(candidate.data)
+            break
+        except ValidationError as exc:
+            errors.append(f"{llm.name}: invalid answer ({exc.error_count()} problem(s))")
+    if answer is None or parsed is None:
+        invalid = any("invalid answer" in e for e in errors)
         return ValidationResult(
             ValidationVerdict.NOT_CHECKED,
-            {"reason": "invalid LLM answer", "provider": answer.provider},
+            {"reason": "invalid LLM answer" if invalid else "LLM unavailable", "errors": errors},
         )
     known = {e.id for e in evidence} | {m.id for m in metrics}
     return ValidationResult(
